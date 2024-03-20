@@ -10,7 +10,7 @@ from numpy import binary_repr
 
 import pytest
 
-import two_d
+from two_d import ImageU8
 
 
 def test_test_itself():
@@ -19,7 +19,10 @@ def test_test_itself():
 
 def test_64_u8_img():
     fig, ax = plt.subplots(1, 5, figsize=(17, 17))
-    N = 64
-    img: two_d.ImageU8 = two_d.ImageU8.bw_square(N=N)
-    img.plot(ax, 0)
+    # N = 64
+    # img: ImageU8 = ImageU8.bw_square_inset_white(N=N)
+    # img.plot(ax, 0)
+    images = ImageU8.images()
+    for i, image in enumerate(images):
+        image.plot(ax, i)
     plt.show()
