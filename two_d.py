@@ -61,3 +61,11 @@ class ImageU8:
             result.append(ImageU8(temp))
         return result
 
+    def plot(self, ax, idx: int) -> None:
+        vmin = np.iinfo(np.uint8).min
+        vmax = 1  # remap [0..255] to [0..1]
+        ax[idx].imshow(self.img, cmap='gray', vmin=vmin, vmax=vmax)
+        ax[idx].set_title('Original image')
+
+
+
