@@ -10,11 +10,11 @@ from numpy import binary_repr
 
 import pytest
 
-from two_d import ImageU8
+from two_d import (return_true, ImageU8)
 
 
 def test_test_itself():
-    assert two_d.return_true()
+    assert return_true()
 
 
 def test_64_u8_img():
