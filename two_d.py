@@ -28,19 +28,23 @@ def divides(small: int, big: int) -> bool:
 
 
 @dataclass
-class ImageU8:
-    img: np.ndarray
+class SqMat:
+    data: np.ndarray
 
     def is_square(self) -> bool:
-        result: bool = self.img.shape[0] == self.img.shape[1]
+        result = self.data.shape[0] == self.data.shape[1]
+        return result
+
+    def is_p2(self) -> bool:
+        result = is_power_of_two(self.data.shape[0])
         return result
 
     def H(self) -> int:
-        result: int = self.img.shape[0]
+        result: int = self.data.shape[0]
         return result
 
     def W(self) -> int:
-        result: int = self.img.shape[1]
+        result: int = self.data.shape[1]
         return result
 
     def N(self) -> int:
@@ -48,9 +52,74 @@ class ImageU8:
         return self.H()
 
     def is_suitable_for_fft(self) -> bool:
-        is_p_of_2 = is_power_of_two(self.N())
-        assert is_p_of_2
-        return self.is_square() and is_p_of_2
+        return self.is_square() and self.is_p2()
+
+    def plot(self, ax, idx, title:str) -> None:
+        raise NotImplementedError
+
+
+@dataclass
+class SqMatC32(SqMat):
+
+    def conjugate(self):
+        temp = np.conj(self.data)
+        result = SqMatC32(temp)
+        return result
+
+    def mul(self, other: "SqMatC32") -> "SqMatC32":
+        result = SqMatC32(self.data * other.data)
+        return result
+
+    def dft(self, inverse: bool=False) -> "SqMatC32":
+        """https://en.wikipedia.org/wiki/Discrete_Fourier_transform
+        O(n^2), slow."""
+        assert self.is_square() and self.is_p2()
+        N: int = self.data.shape[0]
+        if not inverse:
+            result: SqMatC32 = SqMatC32(np.fft.fft2(self.data))
+        else:
+            result: SqMatC32 = SqMatC32(np.fft.ifft2(self.data))
+        # result = SqMatC32(np.zeros((N, N), dtype=np.complexfloating))
+        # for ky in range(N):
+        #     for kx in range(N):
+        #         acc = 0. + 0.j
+        #         for ny in range(N):
+        #             for nx in range(N):
+        #                 nn = np.array([nx / N, ny / N], dtype=np.complexfloating)
+        #                 kk = np.array([kx, ky], dtype=np.complexfloating)
+        #                 f = (0 + 1j) if inverse else (0 - 1j)
+        #                 e = f * (2 * np.pi * np.dot(nn, kk))
+        #                 v = np.exp(e, dtype=np.complexfloating)
+        #                 acc += (v / (N * N)) if inverse else v
+        #         result.data[kx, ky] = acc
+        return result
+
+    def chop(self, epsilon=1.e-10) -> "SqMatC32":
+        assert self.is_square() and self.is_p2()
+        moduli = np.abs(self.data)
+        N: int = self.data.shape[0]
+        temp = np.zeros((N, N), dtype=np.complexfloating)
+        for ky in range(N):
+            for kx in range(N):
+                temp[kx, ky] = (0. + 0.j) if moduli[kx, ky] < epsilon else moduli[kx, kx]
+        result = SqMatC32(temp)
+        return result
+
+    def plot(self, ax, idx, title='complex modulus') -> None:
+        it = np.absolute(self.data)
+        vmin = np.min(it)
+        vmax = np.max(it)
+        ax[idx].imshow(it, cmap='gray', vmin=vmin, vmax=vmax)
+        ax[idx].set_title(title)
+
+
+@dataclass
+class ImageU8(SqMat):
+
+    def to_Complex(self):
+        assert(np.can_cast(self.data, np.complexfloating))
+        result = SqMatC32(self.data.astype(np.complexfloating))
+        return result
 
     @staticmethod
     def black_square(N: int) -> "ImageU8":
@@ -81,7 +150,7 @@ class ImageU8:
         # End three quarters of the way from bottom-right (br).
         br: int = tl + (N // 2)  # 8 + 16 = 24 for N=32
         N2 = N // 2
-        it.img[tl:br, tl:br] = ImageU8._white_square_nda(N2)
+        it.data[tl:br, tl:br] = ImageU8._white_square_nda(N2)
         return it
 
     def bw_square_resized_white_portions(self) -> list["ImageU8"]:
@@ -96,7 +165,7 @@ class ImageU8:
             k = j + side         # 12, 10,  9  4+8=12, 6+4=10, 7+2=9
                                  # The sum is always 16.
             temp = ImageU8.black_square(N)
-            temp.img[j:k, j:k] = ImageU8._white_square_nda(side)
+            temp.data[j:k, j:k] = ImageU8._white_square_nda(side)
             result.append(temp)
         return result
 
@@ -108,8 +177,8 @@ class ImageU8:
         result = ImageU8.black_square(new_size)
         for h in range(result.H()):
             for w in range(result.W()):
-                result.img[h, w] = \
-                    np.mean(self.img[
+                result.data[h, w] = \
+                    np.mean(self.data[
                             h * step : (h + 1) * step,
                             w * step : (w + 1) * step])
         return result
@@ -124,9 +193,9 @@ class ImageU8:
             result.append(temp.avg_pool(size))
         return result
 
-    def plot(self, ax, idx: int) -> None:
-        vmin = np.iinfo(np.uint8).min
-        vmax = np.iinfo(np.uint8).max
-        ax[idx].imshow(self.img, cmap='gray', vmin=vmin, vmax=vmax)
-        ax[idx].set_title('Original image')
+    def plot(self, ax, idx, title='Original image') -> None:
+        vmin = self.data.min()
+        vmax = self.data.max()
+        ax[idx].imshow(self.data, cmap='gray', vmin=vmin, vmax=vmax)
+        ax[idx].set_title(title)
 
