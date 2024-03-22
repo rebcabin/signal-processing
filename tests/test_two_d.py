@@ -103,16 +103,16 @@ kernel_wipe = \
 def test_convolution():
     images = ImageU8.images()
     cplxs = list(reversed([i.to_Complex() for i in images]))
-    convos = [c.convolve_brute_force(kernel_blur)
+    convos = [c.convolve_brute_force(kernel_emboss) for c in cplxs
               for c in cplxs]
-    thrms = [c.convolution_theorem(kernel_blur) for c in cplxs]
+    thrms = [c.convolution_theorem(kernel_emboss) for c in cplxs]
     fig, ax = plt.subplots(5, 5, figsize=(17, 17))
     for i, img in enumerate(images):
         cplxs[i].plot_abs(ax, (0, i), '|complex img|')
-        convos[i].plot_abs(ax, (1, i), '|convo blur|')
-        convos[i].plot_arg(ax, (2, i), '/_convo blur')
-        thrms[i].plot_abs(ax, (3, i), '|theorem blur|')
-        thrms[i].chop().plot_arg(ax, (4, i), '/_theorem blur')
+        convos[i].plot_abs(ax, (1, i), '|convo emboss|')
+        convos[i].chop().plot_arg(ax, (2, i), '/_convo emboss')
+        thrms[i].plot_abs(ax, (3, i), '|theorem emboss|')
+        thrms[i].chop().plot_arg(ax, (4, i), '/_theorem emboss')
     plt.show()
 
 
