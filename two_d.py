@@ -142,13 +142,14 @@ class SqMatC32(SqMat):
             temp = SqMatC32.zeros(N)
             L = (N // 2) - (K // 2)
             temp.data[L: L + K, L: L + K] = kernel.data
-            kfft = temp.fft()
-            sorc = self.fft()
-            temp2 = kfft.elementwise_mul(sorc)
-            result = temp2.ifft()
-            return result
+            return temp
 
-        return pad_kernel(kernel)
+        temp = pad_kernel(kernel)
+        kfft = temp.fft()
+        sorc = self.fft()
+        temp2 = kfft.elementwise_mul(sorc)
+        result = temp2.ifft()
+        return result
 
     def dft(self, inverse: bool = False) -> "SqMatC32":
         """TODO: broken
